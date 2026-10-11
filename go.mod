@@ -3,8 +3,8 @@ module github.com/k8s-manifest-kit/postrenderer-cert
 go 1.27.2
 
 require (
-	github.com/k8s-manifest-kit/engine v0.2.1-0.20260917073048-fdd303dbeb9c
-	github.com/k8s-manifest-kit/pkg v0.2.1-0.20260917072856-00e00ae8cbdb
+	github.com/k8s-manifest-kit/engine v0.2.1-0.20261011173717-6312a8bcbdff
+	github.com/k8s-manifest-kit/pkg v0.2.1-0.20261011171852-68da66919805
 	github.com/onsi/gomega v1.44.0
 	k8s.io/apimachinery v0.37.1
 )
@@ -15,7 +15,6 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/x448/float16 v0.8.4 // indirect
