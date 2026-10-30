@@ -1,6 +1,6 @@
 module github.com/k8s-manifest-kit/postrenderer-cert
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/k8s-manifest-kit/engine v0.2.1-0.20261011173717-6312a8bcbdff
