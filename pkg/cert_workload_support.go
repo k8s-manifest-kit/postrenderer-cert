@@ -176,6 +176,9 @@ func ensureVolumeMount(container map[string]any, volumeName string, mountPath st
 		}
 		if !found {
 			mount["readOnly"] = true
+			// NestedSlice returns a copy, so the mutated slice must be written
+			// back for the read-only setting to reach the rendered workload.
+			return unstructured.SetNestedSlice(container, mounts, "volumeMounts")
 		}
 		return nil
 	}
