@@ -18,6 +18,10 @@ fmt:
 test:
 	go test -v ./...
 
+.PHONY: test/race
+test/race:
+	go test -race ./...
+
 .PHONY: deps
 deps:
 	go mod tidy

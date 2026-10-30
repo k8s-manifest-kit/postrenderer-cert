@@ -4,6 +4,7 @@ Use Go 1.26.8 and the module Makefile:
 
 ```bash
 make test
+make test/race
 make fmt
 make lint
 make check
