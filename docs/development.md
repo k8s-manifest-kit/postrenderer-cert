@@ -17,8 +17,9 @@ for `make test`. Formatting is a separate target (`make fmt`).
 
 Tests stay offline: the post-renderer validates and patches rendered manifests
 and does not contact a cluster. There is no live integration target. Tests
-use unstructured Kubernetes objects built by the helpers in `_support_test.go`
-files, vanilla Gomega assertions, and `t.Context()` where a context is needed.
+use unstructured Kubernetes objects built by the shared helpers in
+`_support_test.go` files, vanilla Gomega assertions, and `t.Context()` where
+a context is needed.
 
 ## Go style
 
@@ -27,8 +28,8 @@ files, vanilla Gomega assertions, and `t.Context()` where a context is needed.
   string`.
 - Keep the root `pkg` package focused on post-renderer orchestration;
   provider-specific behavior belongs under `pkg/provider/<name>`. Shared
-  implementation helpers live in `_support.go` files and test-only helpers in
-  `_support_test.go` files.
+  implementation helpers live in `_support.go` files and shared test-only
+  helpers in `_support_test.go` files.
 - Wrap errors with `%w` when a cause exists and check sentinels with
   `errors.Is`, for example `ErrConflict`. Conflict and validation errors must
   name the object, field, or value needed to diagnose the failure.
@@ -63,10 +64,32 @@ object unless the value is written back with `SetNestedMap` or
 `SetNestedSlice`. Persist every intended mutation, and prove in tests that
 the rendered target actually changed rather than only asserting that no error
 occurred. The regression anchor is
-`TestWorkloadReusePersistsReadOnlyVolumeMount` in `pkg/cert_conflict_test.go`:
+`TestWorkloadReusePersistsReadOnlyVolumeMount` in `pkg/cert_workload_test.go`:
 a reused TLS volume mount that omits `readOnly` is rendered with
 `readOnly: true` only because `ensureVolumeMount` writes the mutated mount
 list back to the container.
+
+## Test layout
+
+- Colocate tests with implementation. A `test/` subdirectory is a separate Go
+  package, not a cosmetic folder; use existing package boundaries.
+- Organize larger suites by concern using `<component>_<concern>_test.go` and
+  retain a cohesive `<component>_test.go` for core API behavior, for example
+  `pkg/cert_test.go` alongside `pkg/cert_conflict_test.go`,
+  `pkg/cert_workload_test.go`, and `pkg/cert_concurrency_test.go`.
+- Place benchmarks in `<component>_benchmark_test.go`, in the same package
+  directory, retaining benchmark names and setup/timing behavior.
+- Put shared helpers in `<component>_support_test.go` and substantial
+  feature-specific fixture machinery in
+  `<component>_<concern>_support_test.go`. Small test-local helpers and
+  scenario assertions can remain beside their tests, as the error-chain
+  helpers in `pkg/cert_error_test.go` do.
+- Support files contain helper/fixture/type declarations, not test,
+  benchmark, fuzz, or example entry points. `_support_test.go` is a naming
+  convention; only `_test.go` has Go's test-file significance.
+- Keep tests discoverable without excessive fragmentation: no hard line
+  limit, mandatory one-file-per-test rule, or automatic test-speed claim.
+  Filenames alone do not exclude a test from the offline suite.
 
 ## Testing expectations
 
@@ -77,14 +100,15 @@ list back to the container.
   generated Certificate case needs a test asserting `errors.Is(err,
   ErrConflict)` and unchanged inputs. Compatible existing objects are reused
   and re-rendering the previous output must return an equal result
-  (`pkg/cert_conflict_test.go`). Selectors, multi-target isolation, and
-  missing-target skipping are covered by `pkg/cert_targets_test.go` and
-  `pkg/cert_test.go`.
+  (`pkg/cert_conflict_test.go` and `pkg/cert_workload_test.go`). Container
+  selectors are covered by `pkg/cert_workload_test.go`; multi-target
+  isolation and missing-target skipping are covered by
+  `pkg/cert_targets_test.go` and `pkg/cert_test.go`.
 - Concurrency: a renderer built from the built-in providers may be called by
   overlapping goroutines. Concurrent tests start workers behind a barrier,
   join all workers, and assert on the test goroutine; workers share the
   configured renderer and inputs read-only and own their results
-  (`pkg/cert_concurrent_test.go`). This covers the built-in pipeline only:
+  (`pkg/cert_concurrency_test.go`). This covers the built-in pipeline only:
   the library does not synchronize user-supplied functions such as
   `WorkloadOptions.ContainerSelector`, which must be concurrency-safe when
   the same renderer is used by overlapping calls.
