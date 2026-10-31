@@ -1,0 +1,29 @@
+version: "2"
+linters:
+  default: standard
+  enable:
+    - asasalint
+    - bidichk
+    - contextcheck
+    - durationcheck
+    - errorlint
+    - fatcontext
+    - makezero
+    - nilerr
+    - nilnesserr
+    - thelper
+    - usetesting
+    - wastedassign
+    - nolintlint
+  settings:
+    govet:
+      enable:
+        - unusedwrite
+        - reflectvaluecompare
+        - deepequalerrors
+    usetesting:
+      context-background: true
+      context-todo: true
+    nolintlint:
+      require-specific: true
+      require-explanation: true

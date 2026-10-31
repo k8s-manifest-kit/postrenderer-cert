@@ -84,7 +84,7 @@ func findWebhook(objects []unstructured.Unstructured, ref WebhookReference) int 
 func validateWebhookEntries(obj unstructured.Unstructured, ref WebhookReference, serviceRef k8stypes.NamespacedName) error {
 	entries, found, err := unstructured.NestedSlice(obj.Object, "webhooks")
 	if err != nil {
-		return fmt.Errorf("%w: webhook %s has invalid entries: %v", ErrInvalidConfiguration, k8sutil.DescribeObject(&obj), err)
+		return fmt.Errorf("%w: webhook %s has invalid entries: %w", ErrInvalidConfiguration, k8sutil.DescribeObject(&obj), err)
 	}
 	if !found || len(entries) == 0 {
 		return fmt.Errorf("%w: webhook %s has no webhook entries", ErrInvalidConfiguration, k8sutil.DescribeObject(&obj))

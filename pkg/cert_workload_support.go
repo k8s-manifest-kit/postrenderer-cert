@@ -67,21 +67,21 @@ func patchWorkload(obj *unstructured.Unstructured, secretName string, options Wo
 	}
 
 	if err := unstructured.SetNestedSlice(podSpec, volumes, "volumes"); err != nil {
-		return fmt.Errorf("%w: set workload volumes: %v", ErrConflict, err)
+		return fmt.Errorf("%w: set workload volumes: %w", ErrConflict, err)
 	}
 	if err := unstructured.SetNestedSlice(podSpec, containers, "containers"); err != nil {
-		return fmt.Errorf("%w: set workload containers: %v", ErrConflict, err)
+		return fmt.Errorf("%w: set workload containers: %w", ErrConflict, err)
 	}
 	if len(initContainers) > 0 {
 		if err := unstructured.SetNestedSlice(podSpec, initContainers, "initContainers"); err != nil {
-			return fmt.Errorf("%w: set workload initContainers: %v", ErrConflict, err)
+			return fmt.Errorf("%w: set workload initContainers: %w", ErrConflict, err)
 		}
 	}
 	if err := unstructured.SetNestedMap(template, podSpec, "spec"); err != nil {
-		return fmt.Errorf("%w: set workload pod spec: %v", ErrConflict, err)
+		return fmt.Errorf("%w: set workload pod spec: %w", ErrConflict, err)
 	}
 	if err := unstructured.SetNestedMap(obj.Object, template, "spec", "template"); err != nil {
-		return fmt.Errorf("%w: set workload pod template: %v", ErrConflict, err)
+		return fmt.Errorf("%w: set workload pod template: %w", ErrConflict, err)
 	}
 
 	return nil
