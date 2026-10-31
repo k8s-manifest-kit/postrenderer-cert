@@ -33,6 +33,28 @@ files, vanilla Gomega assertions, and `t.Context()` where a context is needed.
   `errors.Is`, for example `ErrConflict`. Conflict and validation errors must
   name the object, field, or value needed to diagnose the failure.
 
+### Multiline strings
+
+- Declare every multiline string — fixture, manifest, template, or expected
+  output — as one descriptive, standalone, package-level `const name =` with a
+  raw string literal.
+- Never embed multiline string literals in function or method bodies, and
+  never declare them as function-local constants.
+- Never group multiline constants in a `const (...)` block. Related
+  single-line scalar constants can still be grouped, and single-line inline
+  strings are unaffected.
+- Keep large literal content separate from execution logic for readability.
+  Preserve meaningful content indentation; the declaration layout must not
+  introduce unintended bytes.
+- A function may format the named template into a local variable. The rule
+  concerns where the literal is declared, not where its string value is used.
+
+```go
+const fixtureYAML = `apiVersion: v1
+kind: ConfigMap
+`
+```
+
 ## Mutating unstructured objects
 
 `unstructured.NestedMap` and `unstructured.NestedSlice` return copies of the
