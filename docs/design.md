@@ -7,6 +7,9 @@ the final aggregated object batch, after filters and per-object transformers.
 Generated cert-manager resources are appended to the batch and can be handled
 by later post-renderers.
 
+`Render` deep-copies every input object before patching, so caller-owned
+manifests are never mutated and each render returns an independent batch.
+
 Missing target objects are ignored because filtering may intentionally remove a
 Service, webhook, or workload. Configuration conflicts on objects that are
 present are errors.
@@ -22,7 +25,10 @@ contract:
 - `pkg/provider/openshift` implements OpenShift Service CA configuration;
 - `pkg/provider/certmanager` implements cert-manager Certificate and cainjector
   configuration;
-- `pkg/workload_patcher.go` handles provider-neutral workload Secret mounts.
+- `pkg/cert_workload_patcher.go` selects workloads in the Service namespace
+  and drives the patch;
+- `pkg/cert_workload_support.go` holds the provider-neutral pod-template
+  mutation helpers for Secret volumes and mounts.
 
 The provider interface is internal to this module's construction path; callers
 select the built-in implementations through `ProviderOpenShift` or
@@ -55,7 +61,14 @@ templates receive a read-only Secret volume and mount. The default volume name
 is `webhook-tls` and the default mount path is `/tls`.
 
 An optional container-name predicate selects containers. If it is absent or
-matches no containers, all regular and init containers are patched.
+matches no containers, all regular and init containers are patched; a
+selector that matches patches only the matching containers in both lists.
+
+A compatible existing volume or mount is reused rather than duplicated. A
+reused mount that omits `readOnly` is completed with `readOnly: true`; the
+mutation is written back into the object because the unstructured nested
+getters return copies. A mount that is writable, or that reuses the TLS
+volume name or mount path with a different counterpart, is a conflict.
 
 ## Validation
 

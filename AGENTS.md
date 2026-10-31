@@ -19,10 +19,15 @@ Run commands from this directory:
 
 ```bash
 make test
+make test/race
 make fmt
 make lint
 make check
 ```
+
+`make check` runs lint and vulncheck; it is not a substitute for `make test`.
+Contributor conventions are in [docs/development.md](docs/development.md) and
+architecture rationale is in [docs/design.md](docs/design.md).
 
 Use unstructured Kubernetes objects in tests, Gomega assertions, and
 `t.Context()` where a test needs a context.
