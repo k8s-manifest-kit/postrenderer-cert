@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/k8s-manifest-kit/pkg/util"
+	"github.com/k8s-manifest-kit/pkg/util/slice"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -78,7 +78,7 @@ func generatedCertificate(target provider.Target, spec provider.CertificateSpec)
 		},
 		"spec": map[string]any{
 			"secretName": target.SecretName,
-			"dnsNames":   util.ToAnySlice(dnsNames),
+			"dnsNames":   slice.ToAnySlice(dnsNames),
 			"issuerRef":  issuerRef,
 		},
 	}}

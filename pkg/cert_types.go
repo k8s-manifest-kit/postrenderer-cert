@@ -1,7 +1,7 @@
 package cert
 
 import (
-	"github.com/k8s-manifest-kit/pkg/util"
+	"github.com/k8s-manifest-kit/pkg/util/option"
 	providerconfig "github.com/k8s-manifest-kit/postrenderer-cert/pkg/provider"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -37,7 +37,7 @@ type Options struct {
 	Targets  []Target
 }
 
-// ApplyTo implements util.Option for Options.
+// ApplyTo implements option.Option for Options.
 func (opts Options) ApplyTo(target *Options) {
 	if opts.Provider != "" {
 		target.Provider = opts.Provider
@@ -46,18 +46,18 @@ func (opts Options) ApplyTo(target *Options) {
 }
 
 // Option configures the certificate post-renderer.
-type Option = util.Option[Options]
+type Option = option.Option[Options]
 
 // WithProvider selects the certificate-management provider.
 func WithProvider(provider Provider) Option {
-	return util.FunctionalOption[Options](func(opts *Options) {
+	return option.FunctionalOption[Options](func(opts *Options) {
 		opts.Provider = provider
 	})
 }
 
 // WithTarget adds a target to the post-renderer.
 func WithTarget(target Target) Option {
-	return util.FunctionalOption[Options](func(opts *Options) {
+	return option.FunctionalOption[Options](func(opts *Options) {
 		opts.Targets = append(opts.Targets, target)
 	})
 }

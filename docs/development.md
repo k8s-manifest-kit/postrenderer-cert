@@ -30,6 +30,13 @@ a context is needed.
   provider-specific behavior belongs under `pkg/provider/<name>`. Shared
   implementation helpers live in `_support.go` files and shared test-only
   helpers in `_support_test.go` files.
+- Package layout: `cert.go` and `cert_types.go` hold orchestration and public
+  option types, `cert_support.go` and the `cert_workload_*.go` files hold
+  implementation helpers, and `pkg/provider/{openshift,certmanager}` hold the
+  provider implementations. Post-renderer options are typed by the shared
+  `github.com/k8s-manifest-kit/pkg/util/option` package. The layout follows
+  the shared [`project-layout.md`](../../docs/project-layout.md) convention
+  (workspace navigation).
 - Wrap errors with `%w` when a cause exists and check sentinels with
   `errors.Is`, for example `ErrConflict`. Conflict and validation errors must
   name the object, field, or value needed to diagnose the failure.
