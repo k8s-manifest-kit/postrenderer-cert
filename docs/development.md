@@ -100,6 +100,23 @@ list back to the container.
 
 ## Testing expectations
 
+### Test simplicity
+
+Use the simplest test that proves the contract under test. Don't re-test
+standard-library internals or external certificate controllers, and don't
+add helpers, mocks, instrumentation, subprocesses, or extra test files
+unless a concrete behavior or regression requires them. Keep small suites
+cohesive in one test file; the [concern-suffixed layout](#test-layout)
+rules describe where a justified split goes, not a requirement to create
+those files.
+
+Keep fixtures proportional to the behavior under test: this module patches
+manifests offline, so small unstructured-manifest fixtures with direct
+output assertions are the default — no live cluster or certificate-serving
+infrastructure unless a distinct future contract warrants it. The input
+safety, conflict, idempotency, provider, and concurrency expectations below
+are unchanged by this rule.
+
 - Input safety: rendering must not mutate caller-owned manifests. Snapshot
   the input objects with `testDeepCopyObjects` and compare them after
   rendering.

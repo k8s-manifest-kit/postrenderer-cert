@@ -30,7 +30,10 @@ Contributor conventions are in [docs/development.md](docs/development.md) and
 architecture rationale is in [docs/design.md](docs/design.md).
 
 Use unstructured Kubernetes objects in tests, Gomega assertions, and
-`t.Context()` where a test needs a context.
+`t.Context()` where a test needs a context. Keep tests focused and simple:
+use the smallest manifest fixture that proves the behavior, and add helpers
+or extra test files only when a concrete behavior or regression requires
+them.
 
 Declare parameter types explicitly rather than grouping same-typed parameters;
 write `apiVersion string, kind string`, not `apiVersion, kind string`.
