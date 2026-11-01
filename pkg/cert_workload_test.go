@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	jqmatcher "github.com/lburgazzoli/gomega-matchers/pkg/matchers/jq"
 	. "github.com/onsi/gomega"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -92,13 +93,14 @@ func TestWorkloadReusesCompatibleVolumeAndMount(t *testing.T) {
 	g.Expect(objects).To(Equal(snapshot))
 
 	deployment := rendered[1]
-	volumes, found, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "volumes")
-	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(found).To(BeTrue())
-	g.Expect(volumes).To(Equal([]any{testSecretVolume("webhook-tls", "webhook")}))
-	mounts, found := testContainerMounts(deployment, "containers", "server")
-	g.Expect(found).To(BeTrue())
-	g.Expect(mounts).To(Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}))
+	g.Expect(deployment.Object).To(WithTransform(
+		jqmatcher.Extract(".spec.template.spec.volumes"),
+		Equal([]any{testSecretVolume("webhook-tls", "webhook")}),
+	))
+	g.Expect(deployment.Object).To(WithTransform(
+		jqmatcher.Extract(`.spec.template.spec.containers[] | select(.name == "server") | .volumeMounts`),
+		Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}),
+	))
 
 	secondRender, err := postRenderer(t.Context(), rendered)
 	g.Expect(err).NotTo(HaveOccurred())
@@ -147,25 +149,28 @@ func TestWorkloadReusePersistsReadOnlyVolumeMount(t *testing.T) {
 			g.Expect(objects).To(Equal(snapshot))
 
 			deployment := rendered[1]
-			mounts, found := testContainerMounts(deployment, "containers", "server")
-			g.Expect(found).To(BeTrue())
-			g.Expect(mounts).To(Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}))
+			g.Expect(deployment.Object).To(WithTransform(
+				jqmatcher.Extract(`.spec.template.spec.containers[] | select(.name == "server") | .volumeMounts`),
+				Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}),
+			))
 
 			expectedUnpatched := []any{testVolumeMount("webhook-tls", "/tls")}
 			if tc.containerSelector == nil {
 				expectedUnpatched = []any{testReadOnlyVolumeMount("webhook-tls", "/tls")}
 			}
-			mounts, found = testContainerMounts(deployment, "containers", "sidecar")
-			g.Expect(found).To(BeTrue())
-			g.Expect(mounts).To(Equal(expectedUnpatched))
-			mounts, found = testContainerMounts(deployment, "initContainers", "setup")
-			g.Expect(found).To(BeTrue())
-			g.Expect(mounts).To(Equal(expectedUnpatched))
+			g.Expect(deployment.Object).To(WithTransform(
+				jqmatcher.Extract(`.spec.template.spec.containers[] | select(.name == "sidecar") | .volumeMounts`),
+				Equal(expectedUnpatched),
+			))
+			g.Expect(deployment.Object).To(WithTransform(
+				jqmatcher.Extract(`.spec.template.spec.initContainers[] | select(.name == "setup") | .volumeMounts`),
+				Equal(expectedUnpatched),
+			))
 
-			volumes, found, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "volumes")
-			g.Expect(err).NotTo(HaveOccurred())
-			g.Expect(found).To(BeTrue())
-			g.Expect(volumes).To(Equal([]any{testSecretVolume("webhook-tls", "webhook")}))
+			g.Expect(deployment.Object).To(WithTransform(
+				jqmatcher.Extract(".spec.template.spec.volumes"),
+				Equal([]any{testSecretVolume("webhook-tls", "webhook")}),
+			))
 
 			secondRender, err := postRenderer(t.Context(), rendered)
 			g.Expect(err).NotTo(HaveOccurred())
@@ -194,18 +199,23 @@ func TestContainerSelectorSubsetPatchesOnlySelectedContainers(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 
 	deployment := rendered[1]
-	mounts, found := testContainerMounts(deployment, "containers", "server")
-	g.Expect(found).To(BeTrue())
-	g.Expect(mounts).To(Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}))
-	_, found = testContainerMounts(deployment, "containers", "sidecar")
-	g.Expect(found).To(BeFalse())
-	_, found = testContainerMounts(deployment, "initContainers", "setup")
-	g.Expect(found).To(BeFalse())
+	g.Expect(deployment.Object).To(WithTransform(
+		jqmatcher.Extract(`.spec.template.spec.containers[] | select(.name == "server") | .volumeMounts`),
+		Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}),
+	))
+	g.Expect(deployment.Object).To(WithTransform(
+		jqmatcher.Extract(`.spec.template.spec.containers[] | select(.name == "sidecar") | has("volumeMounts")`),
+		Equal(false),
+	))
+	g.Expect(deployment.Object).To(WithTransform(
+		jqmatcher.Extract(`.spec.template.spec.initContainers[] | select(.name == "setup") | has("volumeMounts")`),
+		Equal(false),
+	))
 
-	volumes, found, err := unstructured.NestedSlice(deployment.Object, "spec", "template", "spec", "volumes")
-	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(found).To(BeTrue())
-	g.Expect(volumes).To(Equal([]any{testSecretVolume("webhook-tls", "webhook")}))
+	g.Expect(deployment.Object).To(WithTransform(
+		jqmatcher.Extract(".spec.template.spec.volumes"),
+		Equal([]any{testSecretVolume("webhook-tls", "webhook")}),
+	))
 }
 
 func TestContainerSelectorWithoutMatchesFallsBackToAllContainers(t *testing.T) {
@@ -229,11 +239,13 @@ func TestContainerSelectorWithoutMatchesFallsBackToAllContainers(t *testing.T) {
 
 	deployment := rendered[1]
 	for _, containerName := range []string{"server", "sidecar"} {
-		mounts, found := testContainerMounts(deployment, "containers", containerName)
-		g.Expect(found).To(BeTrue())
-		g.Expect(mounts).To(Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}))
+		g.Expect(deployment.Object).To(WithTransform(
+			jqmatcher.Extractf(`.spec.template.spec.containers[] | select(.name == %q) | .volumeMounts`, containerName),
+			Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}),
+		))
 	}
-	mounts, found := testContainerMounts(deployment, "initContainers", "setup")
-	g.Expect(found).To(BeTrue())
-	g.Expect(mounts).To(Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}))
+	g.Expect(deployment.Object).To(WithTransform(
+		jqmatcher.Extract(`.spec.template.spec.initContainers[] | select(.name == "setup") | .volumeMounts`),
+		Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}),
+	))
 }

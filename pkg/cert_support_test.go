@@ -1,6 +1,7 @@
 package cert
 
 import (
+	jqmatcher "github.com/lburgazzoli/gomega-matchers/pkg/matchers/jq"
 	"github.com/onsi/gomega"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -155,41 +156,6 @@ func testConfigMapVolume(volumeName string, configName string) map[string]any {
 	}
 }
 
-// testContainersByList returns the regular or init containers of a patched
-// workload indexed by container name.
-func testContainersByList(obj unstructured.Unstructured, listName string) map[string]map[string]any {
-	containers := map[string]map[string]any{}
-	rawContainers, found, err := unstructured.NestedSlice(obj.Object, "spec", "template", "spec", listName)
-	if err != nil || !found {
-		return containers
-	}
-	for _, raw := range rawContainers {
-		container, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		name, _, _ := unstructured.NestedString(container, "name")
-		containers[name] = container
-	}
-
-	return containers
-}
-
-// testContainerMounts returns the volumeMounts of one container, reporting
-// whether the container or its mounts were found.
-func testContainerMounts(obj unstructured.Unstructured, listName string, containerName string) ([]any, bool) {
-	container, ok := testContainersByList(obj, listName)[containerName]
-	if !ok {
-		return nil, false
-	}
-	mounts, found, err := unstructured.NestedSlice(container, "volumeMounts")
-	if err != nil || !found {
-		return nil, false
-	}
-
-	return mounts, true
-}
-
 func testFindObject(objects []unstructured.Unstructured, namespace string, name string) *unstructured.Unstructured {
 	for i := range objects {
 		if objects[i].GetNamespace() == namespace && objects[i].GetName() == name {
@@ -248,30 +214,32 @@ func assertCertificateForService(g *gomega.WithT, certificate *unstructured.Unst
 	g.Expect(certificate.GetAPIVersion()).To(gomega.Equal("cert-manager.io/v1"))
 	g.Expect(certificate.GetKind()).To(gomega.Equal("Certificate"))
 	g.Expect(certificate.GetNamespace()).To(gomega.Equal(namespace))
-	secretName, found, err := unstructured.NestedString(certificate.Object, "spec", "secretName")
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-	g.Expect(found).To(gomega.BeTrue())
-	g.Expect(secretName).To(gomega.Equal(serviceName))
-	dnsNames, found, err := unstructured.NestedStringSlice(certificate.Object, "spec", "dnsNames")
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-	g.Expect(found).To(gomega.BeTrue())
-	g.Expect(dnsNames).To(gomega.Equal([]string{
-		serviceName,
-		serviceName + "." + namespace,
-		serviceName + "." + namespace + ".svc",
-		serviceName + "." + namespace + ".svc.cluster.local",
-	}))
+	g.Expect(certificate.Object).To(gomega.WithTransform(
+		jqmatcher.Extract(".spec.secretName"),
+		gomega.Equal(serviceName),
+	))
+	g.Expect(certificate.Object).To(gomega.WithTransform(
+		jqmatcher.Extract(".spec.dnsNames"),
+		gomega.Equal([]any{
+			serviceName,
+			serviceName + "." + namespace,
+			serviceName + "." + namespace + ".svc",
+			serviceName + "." + namespace + ".svc.cluster.local",
+		}),
+	))
 }
 
 // assertWorkloadMountsSecret asserts that a patched single-container workload
-// carries exactly the default TLS Secret volume mounted read-only.
+// carries exactly the default TLS Secret volume mounted read-only. The named
+// container must exist and hold the exact mount list.
 func assertWorkloadMountsSecret(g *gomega.WithT, workload unstructured.Unstructured, secretName string, containerName string) {
-	volumes, found, err := unstructured.NestedSlice(workload.Object, "spec", "template", "spec", "volumes")
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-	g.Expect(found).To(gomega.BeTrue())
-	g.Expect(volumes).To(gomega.Equal([]any{testSecretVolume("webhook-tls", secretName)}))
+	g.Expect(workload.Object).To(gomega.WithTransform(
+		jqmatcher.Extract(".spec.template.spec.volumes"),
+		gomega.Equal([]any{testSecretVolume("webhook-tls", secretName)}),
+	))
 
-	mounts, found := testContainerMounts(workload, "containers", containerName)
-	g.Expect(found).To(gomega.BeTrue())
-	g.Expect(mounts).To(gomega.Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}))
+	g.Expect(workload.Object).To(gomega.WithTransform(
+		jqmatcher.Extractf(`.spec.template.spec.containers[] | select(.name == %q) | .volumeMounts`, containerName),
+		gomega.Equal([]any{testReadOnlyVolumeMount("webhook-tls", "/tls")}),
+	))
 }
