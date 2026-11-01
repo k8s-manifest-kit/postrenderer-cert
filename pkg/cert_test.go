@@ -57,24 +57,34 @@ func TestOpenShiftConfiguresWebhookServiceAndWorkload(t *testing.T) {
 	g.Expect(webhook.GetAnnotations()).To(HaveKeyWithValue("service.beta.openshift.io/inject-cabundle", "true"))
 
 	deployment := rendered[2]
-	g.Expect(deployment.Object).To(WithTransform(
-		jqmatcher.Extract(".spec.template.spec.volumes"),
-		ContainElement(map[string]any{
-			"name":   "webhook-tls",
-			"secret": map[string]any{"secretName": "webhook"},
-		}),
+	g.Expect(deployment.Object).To(SatisfyAll(
+		jqmatcher.Match(`.spec.template.spec.volumes | type == "array"`),
+		WithTransform(
+			jqmatcher.Extract(".spec.template.spec.volumes"),
+			ContainElement(map[string]any{
+				"name":   "webhook-tls",
+				"secret": map[string]any{"secretName": "webhook"},
+			}),
+		),
 	))
-	g.Expect(deployment.Object).To(WithTransform(
-		jqmatcher.Extract(`[.spec.template.spec.containers[].name]`),
-		Equal([]any{"server", "sidecar"}),
+	g.Expect(deployment.Object).To(SatisfyAll(
+		jqmatcher.Match(`.spec.template.spec.containers | type == "array"`),
+		WithTransform(
+			jqmatcher.Extract(`[.spec.template.spec.containers[].name]`),
+			Equal([]any{"server", "sidecar"}),
+		),
 	))
-	g.Expect(deployment.Object).To(WithTransform(
-		jqmatcher.ExtractAll(`.spec.template.spec.containers[] | .volumeMounts`),
-		HaveEach(ContainElement(map[string]any{
-			"name":      "webhook-tls",
-			"mountPath": "/tls",
-			"readOnly":  true,
-		})),
+	g.Expect(deployment.Object).To(SatisfyAll(
+		jqmatcher.Match(`.spec.template.spec.containers | type == "array"`),
+		jqmatcher.Match(`all(.spec.template.spec.containers[]; .volumeMounts | type == "array")`),
+		WithTransform(
+			jqmatcher.ExtractAll(`.spec.template.spec.containers[] | .volumeMounts`),
+			HaveEach(ContainElement(map[string]any{
+				"name":      "webhook-tls",
+				"mountPath": "/tls",
+				"readOnly":  true,
+			})),
+		),
 	))
 
 	secondRender, err := postRenderer(t.Context(), rendered)
@@ -122,16 +132,19 @@ func TestCertManagerGeneratesCertificateAndConfiguresAllWebhookEntries(t *testin
 		jqmatcher.Extract(".spec.secretName"),
 		Equal("webhook"),
 	))
-	g.Expect(certificate.Object).To(WithTransform(
-		jqmatcher.Extract(".spec.dnsNames"),
-		SatisfyAll(
-			HaveEach(BeAssignableToTypeOf("")),
-			ContainElements(
-				"webhook",
-				"webhook.webhook-system",
-				"webhook.webhook-system.svc",
-				"webhook.webhook-system.svc.cluster.local",
-				"webhook.custom.example",
+	g.Expect(certificate.Object).To(SatisfyAll(
+		jqmatcher.Match(`.spec.dnsNames | type == "array"`),
+		WithTransform(
+			jqmatcher.Extract(".spec.dnsNames"),
+			SatisfyAll(
+				HaveEach(BeAssignableToTypeOf("")),
+				ContainElements(
+					"webhook",
+					"webhook.webhook-system",
+					"webhook.webhook-system.svc",
+					"webhook.webhook-system.svc.cluster.local",
+					"webhook.custom.example",
+				),
 			),
 		),
 	))

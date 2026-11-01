@@ -91,9 +91,12 @@ func TestConcurrentRendersReturnIndependentOutput(t *testing.T) {
 			firstContainer["name"] = "mutated"
 
 			for _, output := range outputs[1:] {
-				g.Expect(output[2].Object).To(WithTransform(
-					jqmatcher.Extract(`[.spec.template.spec.containers[].name]`),
-					ContainElement("server"),
+				g.Expect(output[2].Object).To(SatisfyAll(
+					jqmatcher.Match(`.spec.template.spec.containers | type == "array"`),
+					WithTransform(
+						jqmatcher.Extract(`[.spec.template.spec.containers[].name]`),
+						ContainElement("server"),
+					),
 				))
 			}
 			g.Expect(objects).To(Equal(snapshot))
