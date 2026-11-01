@@ -3,8 +3,8 @@ module github.com/k8s-manifest-kit/postrenderer-cert
 go 1.27.3
 
 require (
-	github.com/k8s-manifest-kit/engine v0.2.1-0.20261031162530-ca45db38c73b
-	github.com/k8s-manifest-kit/pkg v0.2.1-0.20261031162336-25c87f9aadec
+	github.com/k8s-manifest-kit/engine v0.2.1-0.20261101155336-4a3b60213081
+	github.com/k8s-manifest-kit/pkg v0.2.1-0.20261101154913-4bf5cd213e53
 	github.com/onsi/gomega v1.44.0
 	k8s.io/apimachinery v0.37.1
 )
